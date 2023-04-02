@@ -1,0 +1,11 @@
+from core.profiles import *
+### DO NOT EDIT ANYTHING ABOVE THIS LINE ###
+class plextunnel_meta:
+    name = "plextunnel" # name of app
+    pretty_name = "Plex Tunnel" # Name for sidebar
+    urloverride = "https://UNIQUE-URL-HERE.trycloudflare.com"
+    systemd = "cloudflared"
+    process = "plexargod"
+    check_theD = False
+    img = "plex"
+    runas = "root"
