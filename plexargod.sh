@@ -143,6 +143,15 @@ function Get-ArgoURL {
     ArgoURL=$(curl -s -m5 "${ArgoMetricsURL}/metrics" | grep -oP 'userHostname="https://\K[^"]*\.trycloudflare\.com' | head -n1)
     if [ "$ArgoURL" ]; then
         echo "ArgoURL = ${ArgoURL}"
+	echo "${ArgoURL}" >> /tmp/PlexArgoURL_history
+	echo "${ArgoURL}" > /tmp/PlexArgoURL
+        # update swizzin panel - added by ogglord
+	cat /opt/swizzin/core/custom/profiles.py | grep urloverride
+	sed -i.bak "s/[[:blank:]]urloverride[[:blank:]]=.*/ urloverride = \"https:\/\/${ArgoURL}\"/" /opt/swizzin/core/custom/profiles.py
+	echo "## updated by plexargod $(date "+%Y.%m.%d-%H.%M.%S")" | tee -a /opt/swizzin/core/custom/profiles.py
+	cat /opt/swizzin/core/custom/profiles.py | grep urloverride
+	#restart swizzin ui
+	systemctl restart panel
     else
         echo "Failed to get ArgoURL from cloudflared"
         exit 1
@@ -200,7 +209,8 @@ function metricsWatchdog() {
         metricsReturnCode=$?
         if [[ metricsReturnCode -ne 0 ]]; then
            systemd-cat -t ${0##*/} -p emerg <<<"cloudflared metrics server was unresponsive: (curl return code = ${metricsReturnCode}); restarting "
-           exit $metricsReturnCode
+#           exit $metricsReturnCode
+	   kill -9 $(pgrep -f cloudflared)
         fi
     done
 }
@@ -221,7 +231,7 @@ Validate-PlexAPIcustomConnections
 echo "Plex API is updated with the current Argo Tunnel Address."
 
 if [ ${RUN_BY_SYSTEMD} ]; then
-    metricsWatchdog
+    metricsWatchdog > /dev/null 2>&1 & disown
 fi
 
 exit 0
